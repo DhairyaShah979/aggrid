@@ -36,3 +36,13 @@
     transform: rotate(360deg);
   }
 }
+.ag-theme-balham .ag-icon-pin {
+    font-family: "Font Awesome 5 Free";
+    /* FontAwesome uses font-weight bold */
+    font-weight: bold;
+}
+.ag-theme-balham .ag-icon-pin::before {
+    content: '\f08d';
+}
+
+

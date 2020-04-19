@@ -1,18 +1,22 @@
 import React, { Component } from 'react'
-import './App.css'
-import { AgGridReact } from 'ag-grid-react'
+import { AgGridReact } from 'ag-grid-react';
 import 'ag-grid-community/dist/styles/ag-grid.css';
-import 'ag-grid-community/dist/styles/ag-theme-alpine.css';
-
-let gridApi = ''
-
-export class App extends Component {
-
-constructor(props) {
-  super(props)
-
-this.state = {
-columnDefs: [
+import 'ag-grid-community/dist/styles/ag-theme-balham.css';
+import '@elastic/eui/dist/eui_theme_light.css'
+import { EuiIcon, EuiButtonIcon, EuiPopover, EuiSwitch, EuiSpacer } from '@elastic/eui';
+import Pagination from './Components/Pagination';
+import ComboBox from './Components/ComboBox';
+import Delete from './Components/Delete';
+import FilterBox from './Components/FilterBox';
+import Popover from './Components/Popover';
+let api = '';
+class App extends Component {
+    constructor(props) {
+        super(props)
+        this.state = {
+          sizePage:2,
+          pageCount:10,
+            columnDefs: [
    {
     headerName: "FirstName", field: "firstname", 
     getQuickFilterText: function(params){
@@ -27,20 +31,37 @@ columnDefs: [
     headerName: "Contact", field: "contact"
   }, 
   {
-    headerName: "Email", field: "email"
-  },
-  {
-    headerName: "Actions", field: "action",
-
-  }
+    headerName: "Contact", field: "contact"
+  }, 
  
-],
-defaultColDef: { 
-          resizable: true,
-          sortable: true, 
-          filter: true 
-  },
-rowData: [{
+
+  {
+    headerName: "Tags", field: "tags", cellRendererFramework: function(params) {
+       return(
+      <ComboBox />
+      )
+    }
+
+  }, 
+  {
+    headerName: "Email", field: "email"
+  },{
+                headerName: "Actions", field: "action",
+                cellRendererFramework: (params) => <Delete delete={this.deleteRow} /> 
+            }
+            ],
+            defaultColDef: {
+                width: 150,
+                height: 100,
+                editable: true,
+                resizable: true,
+                sortable: true,
+                filter: true,
+                colResizeDefault: 'shift',
+                autoHeight: true,
+                rowHeight: 500
+            },
+            rowData: [{
   firstname: "Dhairya",
   lastname: "Shah",
   branch: "IT",
@@ -166,41 +187,122 @@ rowData: [{
   email: "darshan.raval@gmail.com"
 },
 ],
-}
-}
-
+        };
+    }
 onGridReady = params => {
-  console.log(params)
-  gridApi = params.api
-  this.gridColumnApi = params.columnApi
+      api = params.api;
+      this.gridApi = params.api;
+      this.columnApi = params.columnApi;
+    
 }
-
-
-
+onButtonClick = e => {
+    const selectedNodes = api.getSelectedNodes()
+    const selectedData = selectedNodes.map(node => node.data)
+    const selectedDataStringPresentation = selectedData.map(a => a.firstName + ' ' + a.lastName + ' From ' + a.branch).join('\n ')
+    alert(`Selected nodes: ${'\n'}${selectedDataStringPresentation}`)
+}
 onFilterTextBoxChanged = () => {
 
-  gridApi.setQuickFilter(document.getElementById('filter-text-box').value)
+  api.setQuickFilter(document.getElementById('filter-text-box').value)
+}
+ hideOrShowColumn= (field,flag)=>{
+    console.log(this.columnApi)
+          this.columnApi.setColumnVisible(field,flag)
+       }
+deleteRow = () => {
+        const selectedData = api.getSelectedRows();
+        api.updateRowData({ remove: selectedData });
+    }
+closePopover() {
+    this.setState({
+        isPopoverOpen: false,
+    });
+}
+PopOver = () => {
+    this.setState({
+        isPopoverOpen: !this.state.isPopoverOpen,
+    });
 }
 
-render() {
-  return (
-    <div
-      className="ag-theme-alpine container"
-      style={{ width: 1000, height: 400 }}>
-      <input  type="text" id="filter-text-box" placeholder="Filter..." onInput={this.onFilterTextBoxChanged}/>
-           <AgGridReact
-        columnDefs={this.state.columnDefs}
-        rowData={this.state.rowData}
-        defaultColDef={this.state.defaultColDef}
-        rowSelection="multiple"
-        onGridReady={this.onGridReady}
-        pagination={true}
-        paginationPageSize={10}
+totalPages=()=>
+{
+  this.setState({
+    pageCount:this.gridApi.paginationGetTotalPages()
+  })
+}
+goToPage = (params) => {
+    this.gridApi.paginationGoToPage(params);
+  };
 
-    >                           
-  </AgGridReact>
-</div>
-  )
+pageSize=(number)=>
+{
+  this.setState({
+      sizePage: number,
+    },() => {
+    this.gridApi.paginationSetPageSize(number);
+    // console.log(this.state.sizePage);
+    this.totalPages();
+
+    });
+}
+
+
+render() {
+    const button = (
+        <EuiButtonIcon
+            iconType="managementApp"
+            iconSize="original"
+
+            onClick={this.PopOver.bind(this)}
+        >
+        </EuiButtonIcon>
+    );
+    const { columnDefs, defaultColDef, rowData, isFirstName, isLastName,
+        isAction, isBranch, isContact, isEmail, isTags, } = this.state
+    return (
+        <div
+            className="ag-theme-balham"
+            style={{
+                height: '45vh',
+                width: '100%'
+            }}
+        >
+            <h2 className="bg-dark display-4 text-light" >Ag-Grid</h2>
+            <div style={{ float: 'right' }}>
+                
+          <Popover
+          columnDefs={columnDefs}
+          hideOrShowColumn={this.hideOrShowColumn}
+           
+           />
+                    
+            </div>
+            <FilterBox onFilterTextBoxChanged={this.onFilterTextBoxChanged} />
+              
+            {/* <input className="p-2 m-2 " type="text" onChange={this.searchData} placeholder="Search" /> */}
+            <AgGridReact
+                columnDefs={columnDefs}
+                rowData={rowData}
+                defaultColDef={defaultColDef}
+                rowDataChangeDetectionStrategy='IdentityCheck'
+                onGridReady={this.onGridReady}
+                rowSelection="multiple"
+                enableCellChangeFlash={true}
+                onDragStopped={e => this.updatePopOver(e)}
+                pagination={true}
+                // paginationPageSize={this.state.sizePage}
+
+            >
+            </AgGridReact>
+            <Pagination pageSize={this.pageSize}
+            // totalPages={this.totalPages}
+          pageCount={this.state.pageCount}
+          goToPage={this.goToPage}
+          sizePage={this.state.sizePage} />
+            <button className=" btn btn-primary p-2 m-2 " onClick={this.onButtonClick}>Get selected rows</button>
+
+        </div >
+    );
 }
 }
 
